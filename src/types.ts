@@ -1,26 +1,13 @@
 import { Context } from 'telegraf';
+import { CalendarEvent } from './features/calendar';
+import { Update } from 'telegraf/typings/core/types/typegram';
 
-export interface BotContext extends Context {
-  // Add any custom properties here if needed
-}
+export type BotContext = Context<Update>;
 
-export interface Message {
+export interface ChatMessage {
   text: string;
   userId: number;
   username?: string;
-}
-
-export interface CalendarEvent {
-  id: string;
-  summary?: string;
-  description?: string;
-  start: {
-    dateTime: string;
-  };
-  attendees?: Array<{
-    email: string;
-    responseStatus?: string;
-  }>;
 }
 
 export interface MeetingState {

@@ -2,16 +2,34 @@ import * as dotenv from 'dotenv';
 // Configure dotenv before any other imports
 dotenv.config();
 
-if (!process.env.TELEGRAM_BOT_TOKEN) {
-  console.error('ERROR: TELEGRAM_BOT_TOKEN is not set in .env file');
-  process.exit(1);
+import { Telegraf, Context } from 'telegraf';
+import { handleMessage } from './handlers/messageHandler';
+import { startServer } from './server';
+import { BotContext } from './types';
+import { Message, Update } from 'telegraf/typings/core/types/typegram';
+import { handleAuthCallback, handleAuthChoice } from './features/calendar/authHandler';
+import { loadPermanentTokens } from './features/calendar/calendar';
+import express from 'express';
+import { Request, Response } from 'express';
+
+// Check for required environment variables
+const requiredEnvVars = [
+  'TELEGRAM_BOT_TOKEN',
+  'OPENAI_API_KEY',
+  'GOOGLE_CLIENT_ID',
+  'GOOGLE_CLIENT_SECRET',
+  'GOOGLE_REDIRECT_URI'
+];
+
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    console.error(`ERROR: ${envVar} is not set in .env file`);
+    process.exit(1);
+  }
 }
 
-import { Telegraf } from 'telegraf';
-import { handleMessage } from './handlers/messageHandler';
-import { BotContext } from './types';
-
-const bot = new Telegraf<BotContext>(process.env.TELEGRAM_BOT_TOKEN);
+const bot = new Telegraf<BotContext>(process.env.TELEGRAM_BOT_TOKEN!);
+const app = express();
 
 // Remo's personality and system prompt
 export const REMO_PERSONALITY = `You are Remo, a friendly and engaging AI assistant with a warm personality. Your responses should be:
@@ -52,11 +70,53 @@ bot.command('start', async (ctx) => {
 });
 
 // Handle all messages
-bot.on('message', handleMessage);
+bot.on('message', (ctx) => {
+  if (ctx.message && 'text' in ctx.message) {
+    return handleMessage(ctx);
+  }
+});
 
 // Error handling
 bot.catch((err: any) => {
   console.error('Bot error:', err);
+});
+
+// Update your existing OAuth callback endpoint
+app.get('/oauth2callback', async (req: Request, res: Response) => {
+  const { code, state } = req.query;
+  
+  if (code && state) {
+    await handleAuthCallback(code.toString(), state.toString(), bot.telegram);
+    res.send(
+      '<html><body style="text-align: center; font-family: Arial, sans-serif; padding: 50px;">' +
+      '<h1>✅ Authorization Successful!</h1>' +
+      '<p>Please return to the Telegram bot to choose your authorization preference.</p>' +
+      '<p>You can close this window now.</p>' +
+      '</body></html>'
+    );
+  } else {
+    res.status(400).send(
+      '<html><body style="text-align: center; font-family: Arial, sans-serif; padding: 50px;">' +
+      '<h1>❌ Authorization Failed</h1>' +
+      '<p>Please try again in the Telegram bot.</p>' +
+      '</body></html>'
+    );
+  }
+});
+
+// Start the OAuth callback server with the Express app
+startServer(app);
+
+// Load permanent tokens when bot starts
+loadPermanentTokens();
+
+// Add auth callback handlers
+bot.action(/auth_temp_.*/, async (ctx) => {
+  await handleAuthChoice(ctx, false);
+});
+
+bot.action(/auth_perm_.*/, async (ctx) => {
+  await handleAuthChoice(ctx, true);
 });
 
 // Start the bot
