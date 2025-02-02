@@ -10,6 +10,11 @@
     "watch": "tsc -w"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.511.0",
+    "@aws-sdk/client-dynamodb": "^3.511.0",
+    "@aws-sdk/client-comprehend": "^3.511.0",
+    "@aws-sdk/client-transcribe": "^3.511.0",
+    "@aws-sdk/lib-dynamodb": "^3.511.0",
     "@google-cloud/local-auth": "^3.0.1",
     "@types/express": "^5.0.0",
     "axios": "^1.7.9",

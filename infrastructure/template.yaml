@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS resources for Remo Calendar Assistant'
+
+Resources:
+  MeetingAnalyticsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: meeting-analytics
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: meetingId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: meetingId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: timestamp-index
+          KeySchema:
+            - AttributeName: timestamp
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Project
+          Value: Remo
+        - Key: Environment
+          Value: Production
+
+Outputs:
+  TableName:
+    Description: Name of the DynamoDB table
+    Value: !Ref MeetingAnalyticsTable
+    Export:
+      Name: !Sub "${AWS::StackName}-TableName" 
